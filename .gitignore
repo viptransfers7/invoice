@@ -1,0 +1,10 @@
+data/
+*.b64
+NotoSansKR-Regular.ttf
+NotoSansKR-Bold.ttf
+NotoSansKR.woff2
+node_modules/
+*.json
+!package.json
+PROMPT_FOR_GENSPARK.txt
+GENSPARK_PROMPT.md

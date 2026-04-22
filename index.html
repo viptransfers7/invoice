@@ -1,0 +1,1244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VIP Transfers Korea — Invoice System</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+<script src="/font.js"></script>
+<!-- Firebase -->
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.12.1/firebase-app.js";
+import { getFirestore, collection, doc, setDoc, getDocs, deleteDoc }
+  from "https://www.gstatic.com/firebasejs/12.12.1/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyAO8VNTUyTIE5MsG03Yp3OlgimerTjXgQs",
+  authDomain: "viptransferskorea-5b29b.firebaseapp.com",
+  projectId: "viptransferskorea-5b29b",
+  storageBucket: "viptransferskorea-5b29b.firebasestorage.app",
+  messagingSenderId: "563488550172",
+  appId: "1:563488550172:web:cfe52c38f3175aac519ed9"
+};
+const _app = initializeApp(firebaseConfig);
+const _db  = getFirestore(_app);
+
+// ── Firestore 헬퍼 (window에 노출) ──────────────────────
+window._fbReady = false;
+window._db = _db;
+window._col = collection;
+window._doc = doc;
+window._setDoc = setDoc;
+window._getDocs = getDocs;
+window._deleteDoc = deleteDoc;
+window._fbReady = true;
+window.dispatchEvent(new Event('firebase-ready'));
+</script>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; color: #1a1a2e; }
+nav { background: #1a1a2e; color: #fff; display: flex; align-items: center; padding: 0 24px; height: 56px; }
+nav .logo { font-size: 18px; font-weight: 700; color: #c9a84c; flex: 1; }
+nav button { background: none; border: none; color: #ccc; padding: 16px 18px; cursor: pointer; font-size: 14px; }
+nav button:hover, nav button.active { color: #c9a84c; border-bottom: 2px solid #c9a84c; }
+.page { display: none; padding: 28px; max-width: 1200px; margin: 0 auto; }
+.page.active { display: block; }
+.card { background: #fff; border-radius: 12px; padding: 24px; box-shadow: 0 2px 12px rgba(0,0,0,.08); margin-bottom: 20px; }
+h2 { font-size: 20px; font-weight: 700; margin-bottom: 18px; color: #1a1a2e; }
+h3 { font-size: 15px; font-weight: 600; margin-bottom: 12px; color: #444; }
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.grid3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+label { display: block; font-size: 12px; color: #666; margin-bottom: 4px; margin-top: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .5px; }
+input, select, textarea { width: 100%; padding: 9px 12px; border: 1.5px solid #e0e0e0; border-radius: 8px; font-size: 14px; }
+input:focus, select:focus, textarea:focus { outline: none; border-color: #c9a84c; }
+textarea { resize: vertical; min-height: 60px; }
+.btn { padding: 10px 20px; border: none; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 600; }
+.btn-gold { background: #c9a84c; color: #fff; }
+.btn-gold:hover { background: #b8962f; }
+.btn-outline { background: #fff; color: #c9a84c; border: 2px solid #c9a84c; }
+.btn-outline:hover { background: #fdf8ee; }
+.btn-red { background: #e74c3c; color: #fff; }
+.btn-red:hover { background: #c0392b; }
+.btn-green { background: #27ae60; color: #fff; }
+.btn-green:hover { background: #219a52; }
+.btn-sm { padding: 6px 12px; font-size: 12px; }
+.items-table { width: 100%; border-collapse: collapse; margin-top: 8px; }
+.items-table th { background: #f8f9fa; padding: 10px 8px; text-align: left; font-size: 12px; color: #666; border-bottom: 2px solid #e0e0e0; }
+.items-table td { padding: 6px 4px; border-bottom: 1px solid #f0f0f0; font-size: 13px; }
+.items-table td input { border: 1.5px solid #e0e0e0; background: #fafafa; padding: 7px 8px; border-radius: 6px; width: 100%; }
+.items-table td input:focus { background: #fff8e6; border-color: #c9a84c; outline: none; }
+.stat-card { background: #fff; border-radius: 12px; padding: 20px; text-align: center; box-shadow: 0 2px 12px rgba(0,0,0,.08); }
+.stat-value { font-size: 28px; font-weight: 800; color: #c9a84c; }
+.stat-label { font-size: 13px; color: #888; margin-top: 4px; }
+.inv-table { width: 100%; border-collapse: collapse; }
+.inv-table th { background: #1a1a2e; color: #fff; padding: 12px 14px; text-align: left; font-size: 13px; }
+.inv-table td { padding: 12px 14px; border-bottom: 1px solid #f0f0f0; font-size: 13px; }
+.inv-table tr:hover td { background: #fdf8ee; }
+.badge { display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; }
+.badge-paid { background: #d4edda; color: #155724; }
+.badge-unpaid { background: #fff3cd; color: #856404; }
+.badge-overdue { background: #f8d7da; color: #721c24; }
+.totals-box { background: #f8f9fa; border-radius: 10px; padding: 16px 20px; margin-top: 16px; }
+.totals-row { display: flex; justify-content: space-between; padding: 6px 0; font-size: 14px; }
+.totals-row.total { font-size: 18px; font-weight: 800; color: #c9a84c; border-top: 2px solid #e0e0e0; margin-top: 6px; padding-top: 10px; }
+.divider { height: 1px; background: #eee; margin: 20px 0; }
+.action-row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 20px; }
+.search-bar { display: flex; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; align-items: center; }
+.search-bar input { flex: 1; min-width: 200px; }
+.empty { text-align: center; padding: 40px; color: #aaa; font-size: 15px; }
+.modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.5); z-index: 100; align-items: center; justify-content: center; }
+.modal-overlay.open { display: flex; }
+.modal { background: #fff; border-radius: 16px; padding: 28px; max-width: 500px; width: 95%; max-height: 90vh; overflow-y: auto; }
+.modal h3 { margin-bottom: 16px; }
+@media (max-width: 640px) { .grid2, .grid3 { grid-template-columns: 1fr; } .page { padding: 16px; } }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="logo">🚘 VIP TRANSFERS KOREA</div>
+  <button class="active" onclick="showPage('dashboard', this)">Dashboard</button>
+  <button onclick="showPage('create', this)">New Invoice</button>
+  <button onclick="showPage('invoices', this)">Invoices</button>
+  <button onclick="showPage('settings', this)">Settings</button>
+</nav>
+
+<!-- DASHBOARD -->
+<div id="page-dashboard" class="page active">
+  <div class="grid3" style="margin-bottom:20px">
+    <div class="stat-card"><div class="stat-value" id="stat-total">0</div><div class="stat-label">Total Invoices</div></div>
+    <div class="stat-card"><div class="stat-value" id="stat-unpaid" style="color:#e67e22">$0</div><div class="stat-label">Outstanding</div></div>
+    <div class="stat-card"><div class="stat-value" id="stat-paid" style="color:#27ae60">$0</div><div class="stat-label">Collected (This Month)</div></div>
+  </div>
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+      <h2 style="margin:0">Recent Invoices</h2>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-outline btn-sm" onclick="exportJSON()" title="Download full backup as JSON">💾 Backup</button>
+        <button class="btn btn-outline btn-sm" onclick="importJSON()" title="Restore from JSON backup file">📂 Restore</button>
+      </div>
+    </div>
+    <table class="inv-table">
+      <thead><tr><th>Invoice #</th><th>Client</th><th>Date</th><th>Amount</th><th>Status</th><th>Action</th></tr></thead>
+      <tbody id="dashboard-list"><tr><td colspan="6" class="empty">No invoices yet</td></tr></tbody>
+    </table>
+  </div>
+  <div class="card">
+    <h2>Payment Tracker</h2>
+    <table class="inv-table">
+      <thead><tr><th>Invoice #</th><th>Client</th><th>Amount</th><th>Due Date</th><th>Status</th><th>Update</th></tr></thead>
+      <tbody id="payment-tracker"><tr><td colspan="6" class="empty">No invoices yet</td></tr></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- CREATE INVOICE -->
+<div id="page-create" class="page">
+  <div class="card">
+    <h2>New Invoice</h2>
+    <div class="grid2">
+      <div>
+        <h3>Invoice Info</h3>
+        <label>Invoice Number</label>
+        <input type="text" id="inv-number" placeholder="INV-2026-04-001" />
+        <label>Invoice Date</label>
+        <input type="date" id="inv-date" />
+        <label>Due Date</label>
+        <input type="date" id="inv-due" />
+        <label>Currency</label>
+        <select id="inv-currency" onchange="calcTotals()">
+          <option value="USD">USD ($)</option>
+          <option value="KRW">KRW (₩)</option>
+        </select>
+        <label>VAT</label>
+        <select id="vat-option" onchange="calcTotals()">
+          <option value="include">Include (VAT included in price)</option>
+          <option value="exclude">Exclude (+ 10% VAT)</option>
+        </select>
+        <label>Payment Method</label>
+        <select id="payment-method" onchange="togglePaymentMethod()">
+          <option value="bank">Bank Transfer</option>
+          <option value="link">Payment Link</option>
+        </select>
+        <div id="payment-link-row" style="display:none">
+          <label>Payment Link URL</label>
+          <input type="text" id="payment-link-url" placeholder="https://paypal.me/... or payment URL" />
+        </div>
+      </div>
+      <div>
+        <h3>Bill To</h3>
+        <label>Load Saved Client</label>
+        <select id="client-select" onchange="loadClientFromSelect()">
+          <option value="">— Select a client —</option>
+        </select>
+        <label>Company Name</label>
+        <input type="text" id="client-company" placeholder="AmyExpress" />
+        <label>Contact Person</label>
+        <input type="text" id="client-contact" placeholder="Eline Yin" />
+        <label>Email</label>
+        <input type="email" id="client-email" placeholder="email@company.com" />
+        <label>Address</label>
+        <textarea id="client-address" placeholder="Company address"></textarea>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+    <h3>Service Items</h3>
+    <table class="items-table" id="items-table">
+      <thead><tr>
+        <th style="width:120px">Date</th>
+        <th style="width:150px">Vehicle</th>
+        <th>Description</th>
+        <th style="width:130px">Amount</th>
+        <th style="width:44px"></th>
+      </tr></thead>
+      <tbody id="items-body"></tbody>
+    </table>
+    <button class="btn btn-outline btn-sm" style="margin-top:10px" onclick="addItem()">+ Add Item</button>
+
+    <div class="totals-box">
+      <div class="totals-row"><span>Subtotal</span><span id="subtotal">$0.00</span></div>
+      <div class="totals-row" id="vat-row"><span id="vat-label">VAT (10%)</span><span id="vat-amount">$0.00</span></div>
+      <div class="totals-row total"><span>TOTAL</span><span id="total-amount">$0.00</span></div>
+    </div>
+
+    <div class="divider"></div>
+    <h3>Notes</h3>
+    <textarea id="inv-notes" placeholder="Payment terms, special instructions..."></textarea>
+
+    <div class="action-row" style="align-items:center">
+      <button class="btn btn-gold" onclick="saveInvoice()">Save Invoice</button>
+      <button class="btn btn-outline" onclick="previewPDF()">Preview PDF</button>
+      <button class="btn btn-outline" onclick="downloadPDF()">Download PDF</button>
+      <span id="autosave-status" style="font-size:12px;color:#888;margin-left:8px"></span>
+    </div>
+  </div>
+</div>
+
+<!-- INVOICE LIST -->
+<div id="page-invoices" class="page">
+  <div class="card">
+    <h2>All Invoices</h2>
+    <div class="search-bar">
+      <input type="text" id="search-input" placeholder="Search by client, invoice #..." oninput="renderInvoiceList()" />
+      <select id="filter-status" onchange="renderInvoiceList()" style="width:140px">
+        <option value="">All Status</option>
+        <option value="unpaid">Unpaid</option>
+        <option value="paid">Paid</option>
+        <option value="overdue">Overdue</option>
+      </select>
+      <button class="btn btn-gold btn-sm" onclick="exportCSV()">Export CSV</button>
+    </div>
+    <table class="inv-table">
+      <thead><tr><th>Invoice #</th><th>Client</th><th>Date</th><th>Due</th><th>Amount</th><th>Status</th><th>Actions</th></tr></thead>
+      <tbody id="invoice-list"><tr><td colspan="7" class="empty">No invoices yet</td></tr></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- SETTINGS -->
+<div id="page-settings" class="page">
+  <div class="card">
+    <h2>Company Settings</h2>
+    <div class="grid2">
+      <div>
+        <label>Company Name (English)</label>
+        <input type="text" id="s-name-en" />
+        <label>Address</label>
+        <textarea id="s-address"></textarea>
+        <label>Email</label>
+        <input type="email" id="s-email" />
+        <label>Phone</label>
+        <input type="text" id="s-phone" />
+      </div>
+      <div>
+        <label>Bank Name</label>
+        <input type="text" id="s-bank" />
+        <label>Account Holder</label>
+        <input type="text" id="s-account-name" />
+        <label>Account Number</label>
+        <input type="text" id="s-account-no" />
+        <label>SWIFT / BIC</label>
+        <input type="text" id="s-swift" />
+        <label>PayPal</label>
+        <input type="text" id="s-paypal" placeholder="PayPal email or link" />
+      </div>
+    </div>
+    <div class="action-row">
+      <button class="btn btn-gold" onclick="saveSettings()">Save Settings</button>
+    </div>
+  </div>
+  <div class="card">
+    <h2>Saved Clients</h2>
+    <div id="client-list-settings"></div>
+    <div class="action-row">
+      <button class="btn btn-outline btn-sm" onclick="openClientModal(null)">+ Add Client</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Client Edit -->
+<div class="modal-overlay" id="client-modal">
+  <div class="modal" style="max-width:560px">
+    <h3 id="client-modal-title">Add Client</h3>
+    <input type="hidden" id="client-modal-idx" value="-1" />
+    <div class="grid2">
+      <div>
+        <label>Company Name</label>
+        <input type="text" id="cm-company" placeholder="AmyExpress" />
+        <label>Contact Person</label>
+        <input type="text" id="cm-contact" placeholder="Eline Yin" />
+      </div>
+      <div>
+        <label>Email</label>
+        <input type="email" id="cm-email" placeholder="email@company.com" />
+        <label>Phone</label>
+        <input type="text" id="cm-phone" placeholder="+1 000 000 0000" />
+      </div>
+    </div>
+    <label>Address</label>
+    <textarea id="cm-address" placeholder="Company address"></textarea>
+    <label>Notes</label>
+    <input type="text" id="cm-notes" placeholder="e.g. Net 30, PayPal preferred" />
+    <div class="action-row" style="margin-top:16px">
+      <button class="btn btn-gold" onclick="saveClient()">Save Client</button>
+      <button class="btn btn-outline" onclick="closeClientModal()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Payment Update -->
+<div class="modal-overlay" id="payment-modal">
+  <div class="modal">
+    <h3>Update Payment Status</h3>
+    <input type="hidden" id="modal-inv-id" />
+    <label>Status</label>
+    <select id="modal-status">
+      <option value="unpaid">Unpaid</option>
+      <option value="paid">Paid</option>
+      <option value="overdue">Overdue</option>
+    </select>
+    <label>Payment Date</label>
+    <input type="date" id="modal-pay-date" />
+    <label>Notes</label>
+    <input type="text" id="modal-notes" placeholder="e.g. Wire transfer received" />
+    <div class="action-row" style="margin-top:16px">
+      <button class="btn btn-gold" onclick="savePaymentStatus()">Save</button>
+      <button class="btn btn-outline" onclick="closeModal()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── DATA ─────────────────────────────────────────────────
+var invoices = [];
+var settings = {
+  nameEn: 'The One Concierge Service',
+  address: 'Unit 325, 66 Gonghang-ro 424beon-gil, Jung-gu, Incheon, Korea',
+  email: 'info@viptransferskorea.com',
+  phone: '+82 10-9668-4313',
+  bank: 'Shinhan Bank',
+  bankAddress: '120, 2-90 Taepyeong-ro, Chung-gu, Seoul, Korea',
+  accountName: 'The One Concierge Service',
+  accountNo: '180008736850',
+  swift: 'SHBKKRSE',
+  paypal: ''
+};
+var clients = [];
+
+// ── Firebase Firestore 헬퍼 ──────────────────────────────
+function fbSaveCollection(colName, arr, cb) {
+  if (!window._fbReady) { if(cb) cb(); return; }
+  var col = window._col(window._db, colName);
+  // 전체 overwrite: 먼저 다 지우고 다시 씀
+  window._getDocs(col).then(function(snap) {
+    var deletes = [];
+    snap.forEach(function(d) { deletes.push(window._deleteDoc(d.ref)); });
+    return Promise.all(deletes);
+  }).then(function() {
+    var writes = arr.map(function(item, i) {
+      var id = String(item.id || item.number || i);
+      return window._setDoc(window._doc(window._db, colName, id), item);
+    });
+    return Promise.all(writes);
+  }).then(function() { if(cb) cb({ok:true}); })
+    .catch(function(e) { console.error('fbSave error', colName, e); if(cb) cb(null); });
+}
+
+function fbLoadCollection(colName, cb) {
+  if (!window._fbReady) { cb([]); return; }
+  window._getDocs(window._col(window._db, colName))
+    .then(function(snap) {
+      var arr = [];
+      snap.forEach(function(d) { arr.push(d.data()); });
+      cb(arr);
+    })
+    .catch(function(e) { console.error('fbLoad error', colName, e); cb([]); });
+}
+
+function fbSaveDoc(colName, id, data, cb) {
+  if (!window._fbReady) { if(cb) cb(); return; }
+  window._setDoc(window._doc(window._db, colName, id), data)
+    .then(function() { if(cb) cb({ok:true}); })
+    .catch(function(e) { console.error('fbSaveDoc error', e); if(cb) cb(null); });
+}
+
+// 기존 apiPost → Firebase로 라우팅
+function apiPost(endpoint, data, cb) {
+  if (endpoint === '/api/invoices') { fbSaveCollection('invoices', data, cb); return; }
+  if (endpoint === '/api/clients')  { fbSaveCollection('clients',  data, cb); return; }
+  if (endpoint === '/api/settings') { fbSaveDoc('settings', 'main', data, cb); return; }
+  if (cb) cb(null);
+}
+
+// 앱 초기 로드
+function loadAllData(cb) {
+  fbLoadCollection('invoices', function(inv) {
+    invoices = inv && inv.length ? inv.sort(function(a,b){ return (b.id||0)-(a.id||0); }) : [];
+    fbLoadCollection('clients', function(cls) {
+      clients = cls && cls.length ? cls : [];
+      fbLoadCollection('settings', function(sets) {
+        var s = sets && sets[0];
+        if (s && s.nameEn) settings = s;
+        if (cb) cb();
+      });
+    });
+  });
+}
+
+// ── NAV ──────────────────────────────────────────────────
+function showPage(id, btn) {
+  document.querySelectorAll('.page').forEach(function(p) { p.classList.remove('active'); });
+  document.querySelectorAll('nav button').forEach(function(b) { b.classList.remove('active'); });
+  document.getElementById('page-' + id).classList.add('active');
+  if (btn) btn.classList.add('active');
+  if (id === 'dashboard') renderDashboard();
+  if (id === 'invoices') renderInvoiceList();
+  if (id === 'settings') loadSettings();
+  if (id === 'create') initCreateForm();
+}
+
+// ── CREATE FORM ──────────────────────────────────────────
+function initCreateForm() {
+  var today = new Date();
+  var due = new Date(); due.setDate(due.getDate() + 14);
+  document.getElementById('inv-date').value = today.toISOString().split('T')[0];
+  document.getElementById('inv-due').value = due.toISOString().split('T')[0];
+  var month = String(today.getMonth() + 1).padStart(2, '0');
+  var existing = invoices.filter(function(i) { return i.date && i.date.startsWith(today.getFullYear() + '-' + month); }).length;
+  document.getElementById('inv-number').value = 'INV-' + today.getFullYear() + '-' + month + '-' + String(existing + 1).padStart(3, '0');
+  if (!document.getElementById('items-body').children.length) {
+    addItem(); addItem(); addItem(); addItem(); addItem();
+  }
+  populateClientSelect();
+  // 폼 자동저장 이벤트 연결
+  var formEl = document.getElementById('page-create');
+  if (formEl) {
+    formEl.addEventListener('input', scheduleAutosave);
+    formEl.addEventListener('change', scheduleAutosave);
+  }
+}
+
+function populateClientSelect() {
+  var sel = document.getElementById('client-select');
+  if (!sel) return;
+  sel.innerHTML = '<option value="">— Select a client —</option>';
+  clients.forEach(function(c, i) {
+    var opt = document.createElement('option');
+    opt.value = i;
+    opt.textContent = c.contact ? c.name + ' — ' + c.contact : c.name;
+    sel.appendChild(opt);
+  });
+}
+
+function loadClientFromSelect() {
+  var idx = document.getElementById('client-select').value;
+  if (idx === '') return;
+  var c = clients[parseInt(idx)];
+  if (!c) return;
+  document.getElementById('client-company').value = c.name || '';
+  document.getElementById('client-contact').value = c.contact || '';
+  document.getElementById('client-email').value = c.email || '';
+  document.getElementById('client-address').value = c.address || '';
+}
+
+function addItem() {
+  var tbody = document.getElementById('items-body');
+  var row = document.createElement('tr');
+  row.innerHTML =
+    '<td><input type="date" class="item-date" /></td>' +
+    '<td><input type="text" class="item-vehicle" placeholder="Genesis G90" /></td>' +
+    '<td><input type="text" class="item-desc" placeholder="ICN Airport to Four Seasons Hotel Seoul" /></td>' +
+    '<td><input type="number" class="item-amount" placeholder="0.00" step="0.01" min="0" oninput="calcTotals()" style="text-align:right;font-weight:700;color:#c9a84c" /></td>' +
+    '<td style="text-align:center"><button class="btn btn-red btn-sm" onclick="this.closest(\'tr\').remove();calcTotals()">x</button></td>';
+  tbody.appendChild(row);
+}
+
+function fmtCur(n, cur) {
+  if (cur === 'KRW') return '₩' + Math.round(n).toLocaleString();
+  return '$' + (Math.round(n * 100) / 100).toFixed(2);
+}
+
+function togglePaymentMethod() {
+  var method = document.getElementById('payment-method') ? document.getElementById('payment-method').value : 'bank';
+  var row = document.getElementById('payment-link-row');
+  if (row) row.style.display = method === 'link' ? 'block' : 'none';
+}
+
+function calcTotals() {
+  var sub = 0;
+  document.querySelectorAll('#items-body tr').forEach(function(row) {
+    var el = row.querySelector('.item-amount');
+    var amt = el ? (parseFloat(el.value) || 0) : 0;
+    sub += amt;
+  });
+  var cur = document.getElementById('inv-currency') ? document.getElementById('inv-currency').value : 'USD';
+  var vatOpt = document.getElementById('vat-option') ? document.getElementById('vat-option').value : 'exclude';
+  var vat = 0, total = 0;
+  var vatRow = document.getElementById('vat-row');
+  var vatLabel = document.getElementById('vat-label');
+  if (vatOpt === 'exclude') {
+    vat = Math.round(sub * 0.1 * 100) / 100;
+    total = Math.round((sub + vat) * 100) / 100;
+    if (vatRow) vatRow.style.display = '';
+    if (vatLabel) vatLabel.textContent = 'VAT (10%)';
+  } else {
+    vat = 0;
+    total = sub;
+    if (vatRow) vatRow.style.display = 'none';
+  }
+  document.querySelectorAll('.item-amount').forEach(function(el) {
+    el.placeholder = cur === 'KRW' ? '0' : '0.00';
+  });
+  document.getElementById('subtotal').textContent = fmtCur(sub, cur);
+  document.getElementById('vat-amount').textContent = fmtCur(vat, cur);
+  document.getElementById('total-amount').textContent = fmtCur(total, cur);
+  return { sub: sub, vat: vat, total: total };
+}
+
+function getFormData() {
+  var items = [];
+  document.querySelectorAll('#items-body tr').forEach(function(row) {
+    items.push({
+      date: row.querySelector('.item-date') ? row.querySelector('.item-date').value : '',
+      vehicle: row.querySelector('.item-vehicle') ? row.querySelector('.item-vehicle').value : '',
+      desc: row.querySelector('.item-desc') ? row.querySelector('.item-desc').value : '',
+      amount: row.querySelector('.item-amount') ? row.querySelector('.item-amount').value : ''
+    });
+  });
+  var totals = calcTotals();
+  return {
+    id: Date.now(),
+    number: document.getElementById('inv-number').value,
+    date: document.getElementById('inv-date').value,
+    due: document.getElementById('inv-due').value,
+    currency: document.getElementById('inv-currency').value,
+    clientCompany: document.getElementById('client-company').value,
+    clientContact: document.getElementById('client-contact').value,
+    clientEmail: document.getElementById('client-email').value,
+    clientAddress: document.getElementById('client-address').value,
+    items: items,
+    subtotal: totals.sub,
+    vat: totals.vat,
+    total: totals.total,
+    vatOption: document.getElementById('vat-option') ? document.getElementById('vat-option').value : 'exclude',
+    vatRate: '10',
+    paymentMethod: document.getElementById('payment-method') ? document.getElementById('payment-method').value : 'bank',
+    paymentLinkUrl: document.getElementById('payment-link-url') ? document.getElementById('payment-link-url').value : '',
+    notes: document.getElementById('inv-notes').value,
+    status: 'unpaid',
+    paymentDate: '',
+    paymentNotes: ''
+  };
+}
+
+// ── 자동저장 ──────────────────────────────────────────
+var _autosaveTimer = null;
+function scheduleAutosave() {
+  clearTimeout(_autosaveTimer);
+  var status = document.getElementById('autosave-status');
+  if (status) status.textContent = '수정 중...';
+  _autosaveTimer = setTimeout(function() {
+    var data = getFormData();
+    // number와 client 둘 다 있을 때만 자동저장
+    if (!data.number || !data.clientCompany) {
+      if (status) status.textContent = '';
+      return;
+    }
+    var idx = invoices.findIndex(function(i) { return i.number === data.number; });
+    if (idx >= 0) invoices[idx] = data; else invoices.unshift(data);
+    apiPost('/api/invoices', invoices, function() {
+      if (status) {
+        status.textContent = '✓ 자동저장됨';
+        setTimeout(function(){ status.textContent = ''; }, 2000);
+      }
+    });
+  }, 1500); // 1.5초 후 저장
+}
+
+function saveInvoice() {
+  var data = getFormData();
+  if (!data.number || !data.clientCompany) { alert('Please fill in Invoice # and Client name.'); return; }
+  var idx = invoices.findIndex(function(i) { return i.number === data.number; });
+  if (idx >= 0) invoices[idx] = data; else invoices.unshift(data);
+  apiPost('/api/invoices', invoices, null);
+
+  // 새 client 이면 저장 여부 확인
+  var exists = clients.some(function(c) {
+    return c.name.toLowerCase() === data.clientCompany.toLowerCase() &&
+           (c.contact || '').toLowerCase() === (data.clientContact || '').toLowerCase();
+  });
+  if (!exists && data.clientCompany) {
+    var doSave = confirm('"' + data.clientCompany + (data.clientContact ? ' — ' + data.clientContact : '') + '" is a new client. Save to client list?');
+    if (doSave) {
+      clients.push({
+        name: data.clientCompany,
+        contact: data.clientContact || '',
+        email: data.clientEmail || '',
+        phone: '',
+        address: data.clientAddress || '',
+        notes: ''
+      });
+      apiPost('/api/clients', clients, null);
+      populateClientSelect();
+    }
+  }
+
+  alert('Invoice ' + data.number + ' saved!');
+}
+
+// ── PDF ──────────────────────────────────────────────────
+function fmtAmount(n, currency) {
+  var num = Number(n) || 0;
+  if (currency === 'KRW') return 'KRW ' + Math.round(num).toLocaleString();
+  return 'USD ' + num.toFixed(2);
+}
+
+function buildPDF(inv) {
+  var jsPDF = window.jspdf.jsPDF;
+  var doc = new jsPDF({ unit: 'mm', format: 'a4' });
+
+  // ─ NotoSansKR 한글 폰트 등록 ─
+  if (window.NOTO_REGULAR_B64) {
+    doc.addFileToVFS('NotoSansKR-Regular.ttf', window.NOTO_REGULAR_B64);
+    doc.addFont('NotoSansKR-Regular.ttf', 'NotoSansKR', 'normal');
+  }
+  if (window.NOTO_BOLD_B64) {
+    doc.addFileToVFS('NotoSansKR-Bold.ttf', window.NOTO_BOLD_B64);
+    doc.addFont('NotoSansKR-Bold.ttf', 'NotoSansKR', 'bold');
+  }
+  var KR = !!(window.NOTO_REGULAR_B64); // 한글 폰트 로드 여부
+  function setF(style) {
+    if (KR) doc.setFont('NotoSansKR', style || 'normal');
+    else doc.setFont('helvetica', style || 'normal');
+  }
+
+  var PW = 210, ML = 15, MR = 195;
+  var navy  = [22, 34, 56];
+  var gold  = [185, 148, 78];
+  var white = [255, 255, 255];
+  var light = [246, 247, 249];
+  var muted = [140, 145, 155];
+  var dark  = [38, 42, 52];
+  var cur   = inv.currency || 'USD';
+
+  // ── HEADER ────────────────────────────────────────────
+  doc.setFillColor(navy[0], navy[1], navy[2]);
+  doc.rect(0, 0, PW, 56, 'F');
+  // Gold accent bar bottom
+  doc.setFillColor(gold[0], gold[1], gold[2]);
+  doc.rect(0, 54.5, PW, 1.5, 'F');
+
+  // Company name
+  setF('bold');
+  doc.setFontSize(15);
+  doc.setTextColor(white[0], white[1], white[2]);
+  doc.text('VIP TRANSFERS KOREA', ML, 11);
+
+  // Sub lines: The One Concierge Service Inc / Tax ID / Address / Email | Phone
+  var subLines = [
+    'The One Concierge Service Inc',
+    'Tax ID: 339-88-01263',
+    settings.address || 'Unit 325, 66 Gonghang-ro 424beon-gil, Jung-gu, Incheon, Korea',
+    (settings.email || 'info@viptransferskorea.com') + '   |   ' + (settings.phone || '+82 10-9668-4313')
+  ];
+  setF('normal');
+  doc.setFontSize(7.5);
+  doc.setTextColor(190, 198, 212);
+  subLines.forEach(function(line, i) {
+    doc.text(line, ML, 18 + i * 6.5);
+  });
+
+  // INVOICE label right
+  setF('bold');
+  doc.setFontSize(22);
+  doc.setTextColor(gold[0], gold[1], gold[2]);
+  doc.text('INVOICE', MR, 14, { align: 'right' });
+  doc.setFontSize(8);
+  setF('normal');
+  doc.setTextColor(190, 198, 212);
+  doc.text(inv.number || '', MR, 23, { align: 'right' });
+  doc.text('Prepared by: Alex Choi', MR, 31, { align: 'right' });
+
+  // ── INFO STRIP ─────────────────────────────────────────
+  var stripY = 62;
+  // 박스 좌우 구분
+  var LBX = ML,      LBW = 92;   // 왼쪽 박스 (Bill To)
+  var RBX = ML + 98, RBW = MR - (ML + 98);  // 오른쪽 박스 (Invoice Details)
+  var RBR = RBX + RBW - 4;  // 오른쪽 텍스트 여백 4mm
+
+  // Bill To 내용 미리 계산 → 동적 높이
+  doc.setFontSize(7.5);
+  var billLines = [];
+  if (inv.clientContact) billLines.push('Attn: ' + inv.clientContact);
+  if (inv.clientEmail)   billLines.push(inv.clientEmail);
+  if (inv.clientAddress) {
+    doc.splitTextToSize(inv.clientAddress, LBW - 10).slice(0,3).forEach(function(l){ billLines.push(l); });
+  }
+  var billH  = 8 + 9 + billLines.length * 6.5 + 8;   // label+name+lines+padding
+  var detailH = 8 + 4 * 8 + 8;                         // label+4rows+padding
+  var boxH = Math.max(billH, detailH, 46);
+
+  // ─ Bill To 박스 ─
+  doc.setFillColor(light[0], light[1], light[2]);
+  doc.rect(LBX, stripY, LBW, boxH, 'F');
+  doc.setFillColor(gold[0], gold[1], gold[2]);
+  doc.rect(LBX, stripY, 1.5, boxH, 'F');
+
+  doc.setFontSize(6.5); setF('bold'); doc.setTextColor(muted[0], muted[1], muted[2]);
+  doc.text('BILL TO', LBX + 5, stripY + 7);
+  doc.setFontSize(9.5); setF('bold'); doc.setTextColor(dark[0], dark[1], dark[2]);
+  doc.text(inv.clientCompany || '', LBX + 5, stripY + 15);
+  doc.setFontSize(7.5); setF('normal'); doc.setTextColor(90, 95, 105);
+  var bY = stripY + 23;
+  billLines.forEach(function(l) { doc.text(l, LBX + 5, bY); bY += 6.5; });
+
+  // ─ Invoice Details 박스 ─
+  doc.setFillColor(light[0], light[1], light[2]);
+  doc.rect(RBX, stripY, RBW, boxH, 'F');
+  doc.setFillColor(gold[0], gold[1], gold[2]);
+  doc.rect(RBX, stripY, 1.5, boxH, 'F');
+
+  doc.setFontSize(6.5); setF('bold'); doc.setTextColor(muted[0], muted[1], muted[2]);
+  doc.text('INVOICE DETAILS', RBX + 5, stripY + 7);
+
+  var dRows = [
+    ['Invoice Date', inv.date || ''],
+    ['Due Date',     inv.due  || ''],
+    ['Currency',     cur],
+    ['VAT',          (inv.vatOption || 'exclude') === 'include' ? 'Included' : '10% (Excl.)']
+  ];
+  dRows.forEach(function(r, i) {
+    var dy = stripY + 16 + i * 8;
+    setF('normal'); doc.setFontSize(7.5); doc.setTextColor(100, 104, 115);
+    doc.text(r[0], RBX + 5, dy);
+    setF('bold'); doc.setTextColor(dark[0], dark[1], dark[2]);
+    doc.text(r[1], RBR, dy, { align: 'right' });
+  });
+
+  // ── SERVICE TABLE ──────────────────────────────────────
+  var tY = stripY + boxH + 5;
+  var items = (inv.items || []).filter(function(it){ return it.date || it.vehicle || it.desc || it.amount; });
+  var tData = items.map(function(it) {
+    return [it.date || '', it.vehicle || '', it.desc || '', fmtAmount(it.amount, cur)];
+  });
+  // 빈 줄 포함 최소 5줄 보장
+  while (tData.length < 5) tData.push(['', '', '', '']);
+
+  doc.autoTable({
+    startY: tY,
+    head: [['Date', 'Vehicle', 'Description', 'Amount']],
+    body: tData,
+    theme: 'plain',
+    styles: { font: KR ? 'NotoSansKR' : 'helvetica' },
+    headStyles: {
+      fillColor: navy, textColor: gold, fontStyle: 'bold', fontSize: 7.5,
+      cellPadding: { top: 3, bottom: 3, left: 4, right: 4 }
+    },
+    bodyStyles: {
+      fontSize: 7.5, textColor: [55, 58, 68],
+      cellPadding: { top: 3.5, bottom: 3.5, left: 4, right: 4 }
+    },
+    alternateRowStyles: { fillColor: [250, 251, 252] },
+    columnStyles: {
+      0: { cellWidth: 24 },
+      1: { cellWidth: 34 },
+      2: { cellWidth: 'auto' },
+      3: { cellWidth: 30, halign: 'right', fontStyle: 'bold' }
+    },
+    didDrawCell: function(d) {
+      if (d.section === 'body') {
+        doc.setDrawColor(230, 232, 236); doc.setLineWidth(0.2);
+        doc.line(d.cell.x, d.cell.y + d.cell.height,
+                 d.cell.x + d.cell.width, d.cell.y + d.cell.height);
+      }
+    },
+    margin: { left: ML, right: 15 }
+  });
+
+  var Y = doc.lastAutoTable.finalY + 4;
+
+  // ── TOTALS (right-aligned compact) ────────────────────
+  var tW = MR - ML, tX = ML;
+
+  // Subtotal
+  doc.setFillColor(light[0], light[1], light[2]);
+  doc.rect(tX, Y, tW, 8, 'F');
+  setF('normal'); doc.setFontSize(8); doc.setTextColor(100, 104, 115);
+  doc.text('Subtotal', tX + 4, Y + 5.5);
+  setF('bold'); doc.setTextColor(dark[0], dark[1], dark[2]);
+  doc.text(fmtAmount(inv.subtotal, cur), tX + tW - 4, Y + 5.5, { align: 'right' });
+
+  var vatOption = inv.vatOption || 'exclude';
+  if (vatOption !== 'include') {
+    Y += 9;
+    doc.setFillColor(240, 241, 243);
+    doc.rect(tX, Y, tW, 8, 'F');
+    setF('normal'); doc.setFontSize(8); doc.setTextColor(100, 104, 115);
+    doc.text('VAT (10%)', tX + 4, Y + 5.5);
+    setF('bold'); doc.setTextColor(dark[0], dark[1], dark[2]);
+    var pdfVat = inv.vat > 0 ? inv.vat : Math.round(inv.subtotal * 0.1 * 100) / 100;
+    doc.text(fmtAmount(pdfVat, cur), tX + tW - 4, Y + 5.5, { align: 'right' });
+  }
+
+  Y += 10;
+  doc.setFillColor(navy[0], navy[1], navy[2]);
+  doc.rect(tX, Y, tW, 11, 'F');
+  // Gold left accent
+  doc.setFillColor(gold[0], gold[1], gold[2]);
+  doc.rect(tX, Y, 2, 11, 'F');
+  setF('bold'); doc.setFontSize(9.5); doc.setTextColor(white[0], white[1], white[2]);
+  doc.text('TOTAL', tX + 6, Y + 7.5);
+  doc.setTextColor(gold[0], gold[1], gold[2]);
+  var pdfTotal = vatOption !== 'include' ? (inv.subtotal + pdfVat) : inv.subtotal;
+  doc.text(fmtAmount(pdfTotal, cur), tX + tW - 4, Y + 7.5, { align: 'right' });
+
+  Y += 18;
+
+  // ── PAYMENT INFORMATION ────────────────────────────────
+  // Section header with gold underline
+  setF('bold'); doc.setFontSize(7.5); doc.setTextColor(navy[0], navy[1], navy[2]);
+  doc.text('PAYMENT INFORMATION', ML, Y);
+  doc.setDrawColor(gold[0], gold[1], gold[2]); doc.setLineWidth(0.5);
+  doc.line(ML, Y + 1.5, ML + 52, Y + 1.5);
+  Y += 7;
+
+  if (inv.paymentMethod === 'link' && inv.paymentLinkUrl) {
+    setF('bold'); doc.setFontSize(7.5); doc.setTextColor(100, 104, 115);
+    doc.text('Payment Link:', ML, Y);
+    setF('normal'); doc.setTextColor(41, 105, 185);
+    doc.textWithLink(inv.paymentLinkUrl, ML + 30, Y, { url: inv.paymentLinkUrl });
+    Y += 6;
+  } else {
+    var bInfo = [
+      ['Bank',           settings.bank || 'Shinhan Bank'],
+      ['Bank Address',   settings.bankAddress || '120, 2-90 Taepyeong-ro, Chung-gu, Seoul, Korea'],
+      ['Account Holder', settings.accountName || 'The One Concierge Service'],
+      ['Account No',     settings.accountNo || ''],
+      ['SWIFT / BIC',    settings.swift || 'SHBKKRSE']
+    ];
+    bInfo.forEach(function(r) {
+      setF('bold'); doc.setFontSize(7.5); doc.setTextColor(100, 104, 115);
+      doc.text(r[0], ML, Y);
+      setF('normal'); doc.setTextColor(dark[0], dark[1], dark[2]);
+      var bLines = doc.splitTextToSize(r[1], 120);
+      doc.text(bLines[0], ML + 32, Y);
+      Y += 5.8;
+    });
+  }
+
+  if (inv.notes) {
+    Y += 3;
+    doc.setDrawColor(220, 222, 226); doc.setLineWidth(0.2);
+    doc.line(ML, Y, MR, Y); Y += 5;
+    setF('bold'); doc.setFontSize(7.5); doc.setTextColor(navy[0], navy[1], navy[2]);
+    doc.text('NOTES', ML, Y); Y += 5;
+    setF('normal'); doc.setFontSize(7.5); doc.setTextColor(90, 95, 105);
+    var nLines = doc.splitTextToSize(inv.notes, MR - ML);
+    doc.text(nLines, ML, Y);
+  }
+
+  // ── FOOTER ─────────────────────────────────────────────
+  var fY = 285;
+  doc.setFillColor(navy[0], navy[1], navy[2]);
+  doc.rect(0, fY, PW, 12, 'F');
+  doc.setFillColor(gold[0], gold[1], gold[2]);
+  doc.rect(0, fY, PW, 1, 'F');
+  setF('bold'); doc.setFontSize(8); doc.setTextColor(gold[0], gold[1], gold[2]);
+  doc.text('Thank you for your business!', PW / 2, fY + 5.5, { align: 'center' });
+  setF('normal'); doc.setFontSize(6.5); doc.setTextColor(160, 168, 185);
+  doc.text('www.viptransferskorea.com   |   ' + (settings.email || ''), PW / 2, fY + 10, { align: 'center' });
+
+  return doc;
+}
+function previewPDF() {
+  var data = getFormData();
+  if (!data.clientCompany) { alert('Please enter a client name first.'); return; }
+  var doc = buildPDF(data);
+  var url = doc.output('bloburl');
+  window.open(url, '_blank');
+}
+
+function previewPDFInv(inv) {
+  var doc = buildPDF(inv);
+  var url = doc.output('bloburl');
+  window.open(url, '_blank');
+}
+
+function downloadPDF(inv) {
+  if (!inv) inv = getFormData();
+  if (!inv.clientCompany && !inv.number) { alert('Please fill in invoice details first.'); return; }
+  var doc = buildPDF(inv);
+  doc.save((inv.number || 'invoice') + '.pdf');
+}
+
+// ── DASHBOARD ────────────────────────────────────────────
+function renderDashboard() {
+  document.getElementById('stat-total').textContent = invoices.length;
+  var unpaidTotal = invoices.filter(function(i) { return i.status !== 'paid'; }).reduce(function(s, i) { return s + (i.total || 0); }, 0);
+  var now = new Date();
+  var ym = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0');
+  var paidTotal = invoices.filter(function(i) { return i.status === 'paid' && i.paymentDate && i.paymentDate.startsWith(ym); }).reduce(function(s, i) { return s + (i.total || 0); }, 0);
+  document.getElementById('stat-unpaid').textContent = '$' + unpaidTotal.toFixed(2);
+  document.getElementById('stat-paid').textContent = '$' + paidTotal.toFixed(2);
+
+  var recent = invoices.slice(0, 5);
+  var tbody = document.getElementById('dashboard-list');
+  if (!recent.length) { tbody.innerHTML = '<tr><td colspan="6" class="empty">No invoices yet</td></tr>'; }
+  else tbody.innerHTML = recent.map(function(inv) {
+    return '<tr>' +
+      '<td><strong>' + inv.number + '</strong></td>' +
+      '<td>' + inv.clientCompany + '</td>' +
+      '<td>' + inv.date + '</td>' +
+      '<td>$' + (inv.total || 0).toFixed(2) + '</td>' +
+      '<td><span class="badge badge-' + inv.status + '">' + inv.status.toUpperCase() + '</span></td>' +
+      '<td><button class="btn btn-outline btn-sm" onclick=\'downloadPDF(' + JSON.stringify(inv) + ')\'>PDF</button></td>' +
+      '</tr>';
+  }).join('');
+
+  var unpaid = invoices.filter(function(i) { return i.status !== 'paid'; });
+  var tracker = document.getElementById('payment-tracker');
+  if (!unpaid.length) { tracker.innerHTML = '<tr><td colspan="6" class="empty">All invoices paid!</td></tr>'; }
+  else tracker.innerHTML = unpaid.map(function(inv) {
+    return '<tr>' +
+      '<td><strong>' + inv.number + '</strong></td>' +
+      '<td>' + inv.clientCompany + '</td>' +
+      '<td>$' + (inv.total || 0).toFixed(2) + '</td>' +
+      '<td>' + (inv.due || '-') + '</td>' +
+      '<td><span class="badge badge-' + inv.status + '">' + inv.status.toUpperCase() + '</span></td>' +
+      '<td><button class="btn btn-green btn-sm" onclick="openPaymentModal(\'' + inv.id + '\')">Update</button></td>' +
+      '</tr>';
+  }).join('');
+}
+
+// ── INVOICE LIST ─────────────────────────────────────────
+function renderInvoiceList() {
+  var q = (document.getElementById('search-input') ? document.getElementById('search-input').value : '').toLowerCase();
+  var f = document.getElementById('filter-status') ? document.getElementById('filter-status').value : '';
+  var list = invoices.filter(function(i) {
+    var match = !q || i.number.toLowerCase().includes(q) || i.clientCompany.toLowerCase().includes(q);
+    var status = !f || i.status === f;
+    return match && status;
+  });
+  var tbody = document.getElementById('invoice-list');
+  if (!list.length) { tbody.innerHTML = '<tr><td colspan="7" class="empty">No invoices found</td></tr>'; return; }
+  tbody.innerHTML = list.map(function(inv) {
+    return '<tr>' +
+      '<td><strong>' + inv.number + '</strong></td>' +
+      '<td>' + inv.clientCompany + '<br><small style="color:#999">' + (inv.clientContact || '') + '</small></td>' +
+      '<td>' + inv.date + '</td>' +
+      '<td>' + (inv.due || '-') + '</td>' +
+      '<td><strong>$' + (inv.total || 0).toFixed(2) + '</strong></td>' +
+      '<td><span class="badge badge-' + inv.status + '">' + inv.status.toUpperCase() + '</span></td>' +
+      '<td style="display:flex;gap:6px;flex-wrap:wrap">' +
+        '<button class="btn btn-gold btn-sm" onclick="editInvoice(\'' + inv.id + '\')">Edit</button>' +
+        '<button class="btn btn-outline btn-sm" onclick=\'previewPDFInv(' + JSON.stringify(inv) + ')\'>Preview</button>' +
+        '<button class="btn btn-outline btn-sm" onclick=\'downloadPDF(' + JSON.stringify(inv) + ')\'>PDF</button>' +
+        '<button class="btn btn-green btn-sm" onclick="openPaymentModal(\'' + inv.id + '\')">Pay</button>' +
+        '<button class="btn btn-red btn-sm" onclick="deleteInvoice(\'' + inv.id + '\')">Del</button>' +
+      '</td></tr>';
+  }).join('');
+}
+
+function editInvoice(id) {
+  var inv = invoices.find(function(i) { return String(i.id) === String(id); });
+  if (!inv) return;
+
+  // New Invoice 탭으로 이동
+  document.querySelectorAll('.page').forEach(function(p) { p.classList.remove('active'); });
+  document.querySelectorAll('nav button').forEach(function(b) { b.classList.remove('active'); });
+  document.getElementById('page-create').classList.add('active');
+  document.querySelectorAll('nav button')[1].classList.add('active');
+
+  // 기존 items 비우기
+  document.getElementById('items-body').innerHTML = '';
+
+  // 기본 정보 채우기
+  document.getElementById('inv-number').value = inv.number || '';
+  document.getElementById('inv-date').value = inv.date || '';
+  document.getElementById('inv-due').value = inv.due || '';
+  document.getElementById('inv-currency').value = inv.currency || 'USD';
+  document.getElementById('client-company').value = inv.clientCompany || '';
+  document.getElementById('client-contact').value = inv.clientContact || '';
+  document.getElementById('client-email').value = inv.clientEmail || '';
+  document.getElementById('client-address').value = inv.clientAddress || '';
+  if (document.getElementById('vat-option')) document.getElementById('vat-option').value = inv.vatOption || 'exclude';
+  if (document.getElementById('payment-method')) {
+    document.getElementById('payment-method').value = inv.paymentMethod || 'bank';
+    togglePaymentMethod();
+  }
+  if (document.getElementById('payment-link-url')) document.getElementById('payment-link-url').value = inv.paymentLinkUrl || '';
+  document.getElementById('inv-notes').value = inv.notes || '';
+
+  // Service items 채우기
+  (inv.items || []).forEach(function(it) {
+    var tbody = document.getElementById('items-body');
+    var row = document.createElement('tr');
+    var safeVehicle = (it.vehicle || '').replace(/"/g, '&quot;');
+    var safeDesc = (it.desc || '').replace(/"/g, '&quot;');
+    row.innerHTML =
+      '<td><input type="date" class="item-date" value="' + (it.date || '') + '" /></td>' +
+      '<td><input type="text" class="item-vehicle" placeholder="Genesis G90" value="' + safeVehicle + '" /></td>' +
+      '<td><input type="text" class="item-desc" placeholder="ICN Airport to Four Seasons Hotel Seoul" value="' + safeDesc + '" /></td>' +
+      '<td><input type="number" class="item-amount" placeholder="0.00" step="0.01" min="0" value="' + (it.amount || '') + '" oninput="calcTotals()" style="text-align:right;font-weight:700;color:#c9a84c" /></td>' +
+      '<td style="text-align:center"><button class="btn btn-red btn-sm" onclick="this.closest(\'tr\').remove();calcTotals()">x</button></td>';
+    tbody.appendChild(row);
+  });
+  if (!document.getElementById('items-body').children.length) addItem();
+
+  populateClientSelect();
+  calcTotals();
+  window.scrollTo(0, 0);
+}
+
+function deleteInvoice(id) {
+  if (!confirm('Delete this invoice?')) return;
+  invoices = invoices.filter(function(i) { return String(i.id) !== String(id); });
+  apiPost('/api/invoices', invoices, null);
+  renderInvoiceList();
+}
+
+// ── PAYMENT MODAL ────────────────────────────────────────
+function openPaymentModal(id) {
+  var inv = invoices.find(function(i) { return String(i.id) === String(id); });
+  if (!inv) return;
+  document.getElementById('modal-inv-id').value = id;
+  document.getElementById('modal-status').value = inv.status;
+  document.getElementById('modal-pay-date').value = inv.paymentDate || '';
+  document.getElementById('modal-notes').value = inv.paymentNotes || '';
+  document.getElementById('payment-modal').classList.add('open');
+}
+
+function closeModal() { document.getElementById('payment-modal').classList.remove('open'); }
+
+function savePaymentStatus() {
+  var id = document.getElementById('modal-inv-id').value;
+  var inv = invoices.find(function(i) { return String(i.id) === String(id); });
+  if (!inv) return;
+  inv.status = document.getElementById('modal-status').value;
+  inv.paymentDate = document.getElementById('modal-pay-date').value;
+  inv.paymentNotes = document.getElementById('modal-notes').value;
+  apiPost('/api/invoices', invoices, null);
+  closeModal();
+  renderDashboard();
+  renderInvoiceList();
+  alert('Payment status updated!');
+}
+
+// ── SETTINGS ─────────────────────────────────────────────
+function loadSettings() {
+  document.getElementById('s-name-en').value = settings.nameEn || '';
+  document.getElementById('s-address').value = settings.address || '';
+  document.getElementById('s-email').value = settings.email || '';
+  document.getElementById('s-phone').value = settings.phone || '';
+  document.getElementById('s-bank').value = settings.bank || '';
+  document.getElementById('s-account-name').value = settings.accountName || '';
+  document.getElementById('s-account-no').value = settings.accountNo || '';
+  document.getElementById('s-swift').value = settings.swift || '';
+  document.getElementById('s-paypal').value = settings.paypal || '';
+  renderClientList();
+}
+
+function saveSettings() {
+  settings = {
+    nameEn: document.getElementById('s-name-en').value,
+    address: document.getElementById('s-address').value,
+    email: document.getElementById('s-email').value,
+    phone: document.getElementById('s-phone').value,
+    bank: document.getElementById('s-bank').value,
+    bankAddress: '120, 2-90 Taepyeong-ro, Chung-gu, Seoul, Korea',
+    accountName: document.getElementById('s-account-name').value,
+    accountNo: document.getElementById('s-account-no').value,
+    swift: document.getElementById('s-swift').value,
+    paypal: document.getElementById('s-paypal').value
+  };
+  apiPost('/api/settings', settings, null);
+  alert('Settings saved!');
+}
+
+// ── CLIENT LIST ──────────────────────────────────────────
+function renderClientList() {
+  var el = document.getElementById('client-list-settings');
+  if (!clients.length) { el.innerHTML = '<p style="color:#aaa;font-size:13px;padding:12px">No clients saved.</p>'; return; }
+  el.innerHTML = '<table class="inv-table"><thead><tr><th>Company</th><th>Contact</th><th>Email</th><th>Phone</th><th>Notes</th><th>Actions</th></tr></thead><tbody>' +
+    clients.map(function(c, i) {
+      return '<tr>' +
+        '<td><strong>' + c.name + '</strong></td>' +
+        '<td>' + (c.contact || '-') + '</td>' +
+        '<td>' + (c.email || '-') + '</td>' +
+        '<td>' + (c.phone || '-') + '</td>' +
+        '<td style="color:#999;font-size:12px">' + (c.notes || '') + '</td>' +
+        '<td style="display:flex;gap:6px">' +
+          '<button class="btn btn-outline btn-sm" onclick="openClientModal(' + i + ')">Edit</button>' +
+          '<button class="btn btn-red btn-sm" onclick="removeClient(' + i + ')">Del</button>' +
+        '</td></tr>';
+    }).join('') + '</tbody></table>';
+}
+
+function openClientModal(idx) {
+  document.getElementById('client-modal-idx').value = (idx === null || idx === undefined) ? -1 : idx;
+  document.getElementById('client-modal-title').textContent = (idx === null || idx === undefined) ? 'Add Client' : 'Edit Client';
+  var c = (idx !== null && idx !== undefined && idx >= 0) ? clients[idx] : {};
+  document.getElementById('cm-company').value = c.name || '';
+  document.getElementById('cm-contact').value = c.contact || '';
+  document.getElementById('cm-email').value = c.email || '';
+  document.getElementById('cm-phone').value = c.phone || '';
+  document.getElementById('cm-address').value = c.address || '';
+  document.getElementById('cm-notes').value = c.notes || '';
+  document.getElementById('client-modal').classList.add('open');
+}
+
+function closeClientModal() { document.getElementById('client-modal').classList.remove('open'); }
+
+function saveClient() {
+  var idx = parseInt(document.getElementById('client-modal-idx').value);
+  var c = {
+    name: document.getElementById('cm-company').value.trim(),
+    contact: document.getElementById('cm-contact').value.trim(),
+    email: document.getElementById('cm-email').value.trim(),
+    phone: document.getElementById('cm-phone').value.trim(),
+    address: document.getElementById('cm-address').value.trim(),
+    notes: document.getElementById('cm-notes').value.trim()
+  };
+  if (!c.name) { alert('Company name is required.'); return; }
+  if (idx >= 0) clients[idx] = c; else clients.push(c);
+  apiPost('/api/clients', clients, null);
+  closeClientModal();
+  renderClientList();
+  alert('Client saved!');
+}
+
+function removeClient(i) {
+  if (!confirm('Delete client "' + clients[i].name + '"?')) return;
+  clients.splice(i, 1);
+  apiPost('/api/clients', clients, null);
+  renderClientList();
+}
+
+// ── CSV EXPORT ───────────────────────────────────────────
+function exportCSV() {
+  var headers = ['Invoice #', 'Client', 'Contact', 'Date', 'Due', 'Total', 'Currency', 'Status', 'Payment Date'];
+  var rows = invoices.map(function(i) {
+    return [i.number, i.clientCompany, i.clientContact, i.date, i.due, (i.total || 0).toFixed(2), i.currency, i.status, i.paymentDate || ''];
+  });
+  var csv = [headers].concat(rows).map(function(r) { return r.join(','); }).join('\n');
+  var a = document.createElement('a');
+  a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv);
+  a.download = 'vip_invoices.csv';
+  a.click();
+}
+
+// ── INIT ─────────────────────────────────────────────────
+loadAllData(function() {
+  renderDashboard();
+});
+
+// (legacy backup functions removed)
+function backupToServer() {
+  var payload = {
+    invoices: invoices,
+    clients: clients,
+    settings: settings,
+    savedAt: new Date().toISOString()
+  };
+  fetch('/backup', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  }).catch(function() {});
+}
+
+// 서버에서 복구
+function restoreFromServer() {
+  fetch('/backup')
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      if (data && data.invoices && data.invoices.length > 0) {
+        if (confirm('Found ' + data.invoices.length + ' invoices in server backup (saved ' + (data.savedAt || '').slice(0,10) + '). Restore now?')) {
+          invoices = data.invoices;
+          clients = data.clients || clients;
+          settings = data.settings || settings;
+          // Firebase에서 자동 처리
+          renderDashboard();
+          alert('Restored ' + invoices.length + ' invoices!');
+        }
+      } else {
+        alert('No backup found on server.');
+      }
+    })
+    .catch(function() { alert('Could not reach server backup.'); });
+}
+
+// Export JSON 백업
+function exportJSON() {
+  var data = {
+    invoices: invoices,
+    clients: clients,
+    settings: settings,
+    exportedAt: new Date().toISOString()
+  };
+  var a = document.createElement('a');
+  a.href = 'data:application/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(data, null, 2));
+  a.download = 'vip_backup_' + new Date().toISOString().slice(0,10) + '.json';
+  a.click();
+}
+
+// Import JSON 복구
+function importJSON() {
+  var input = document.createElement('input');
+  input.type = 'file';
+  input.accept = '.json';
+  input.onchange = function(e) {
+    var file = e.target.files[0];
+    var reader = new FileReader();
+    reader.onload = function(ev) {
+      try {
+        var data = JSON.parse(ev.target.result);
+        if (!data.invoices) { alert('Invalid backup file.'); return; }
+        if (confirm('Import ' + data.invoices.length + ' invoices? This will merge with existing data.')) {
+          // 중복 제거 후 병합
+          data.invoices.forEach(function(inv) {
+            var exists = invoices.findIndex(function(i) { return i.number === inv.number; });
+            if (exists >= 0) invoices[exists] = inv; else invoices.push(inv);
+          });
+          if (data.clients) clients = data.clients;
+          if (data.settings) settings = data.settings;
+          // Firebase에서 자동 처리
+          renderDashboard();
+          alert('Imported ' + data.invoices.length + ' invoices successfully!');
+        }
+      } catch(e) { alert('Error reading file: ' + e.message); }
+    };
+    reader.readAsText(file);
+  };
+  input.click();
+}
+
+// 저장할 때마다 자동 백업
+// Firebase 저장 방식으로 전환됨
+
+// renderDashboard() now called by loadAllData
+</script>
+</body>
+</html>
