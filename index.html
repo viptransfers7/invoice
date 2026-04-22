@@ -1150,9 +1150,25 @@ function exportCSV() {
 }
 
 // ── INIT ─────────────────────────────────────────────────
-loadAllData(function() {
-  renderDashboard();
-});
+function initApp() {
+  loadAllData(function() {
+    renderDashboard();
+  });
+}
+
+// Firebase 모듈이 먼저 로드된 후 실행
+if (window._fbReady) {
+  initApp();
+} else {
+  window.addEventListener('firebase-ready', function() {
+    initApp();
+  });
+  // 혹시 이벤트를 놓쳤을 경우 fallback
+  setTimeout(function() {
+    if (!window._appInited) initApp();
+  }, 3000);
+}
+window._appInited = true;
 
 // (legacy backup functions removed)
 function backupToServer() {
