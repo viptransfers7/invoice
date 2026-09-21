@@ -5,7 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>VIP Transfers Korea — Invoice System</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script><script src="./font.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+<!-- Keep this relative: GitHub Pages serves the app from /invoice/, not the domain root. -->
+<script src="./font.js"></script>
 <!-- Firebase -->
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.12.1/firebase-app.js";
@@ -160,6 +162,13 @@ textarea { resize: vertical; min-height: 60px; }
           <option value="bank">Bank Transfer</option>
           <option value="link">Payment Link</option>
         </select>
+        <div id="payment-bank-row">
+          <label>Bank Account</label>
+          <select id="payment-account-type">
+            <option value="international">Overseas / Foreign Currency Account</option>
+            <option value="domestic">Korean Domestic Account (KRW)</option>
+          </select>
+        </div>
         <div id="payment-link-row" style="display:none">
           <label>Payment Link URL</label>
           <input type="text" id="payment-link-url" placeholder="https://paypal.me/... or payment URL" />
@@ -252,6 +261,7 @@ textarea { resize: vertical; min-height: 60px; }
         <input type="text" id="s-phone" />
       </div>
       <div>
+        <h3>Overseas / Foreign Currency Account</h3>
         <label>Bank Name</label>
         <input type="text" id="s-bank" />
         <label>Account Holder</label>
@@ -260,6 +270,14 @@ textarea { resize: vertical; min-height: 60px; }
         <input type="text" id="s-account-no" />
         <label>SWIFT / BIC</label>
         <input type="text" id="s-swift" />
+        <div class="divider"></div>
+        <h3>Korean Domestic Account (KRW)</h3>
+        <label>은행명</label>
+        <input type="text" id="s-domestic-bank" placeholder="예: 신한은행" />
+        <label>예금주</label>
+        <input type="text" id="s-domestic-account-name" placeholder="예: 더원컨시어지서비스" />
+        <label>계좌번호</label>
+        <input type="text" id="s-domestic-account-no" placeholder="숫자와 하이픈 입력" />
         <label>PayPal</label>
         <input type="text" id="s-paypal" placeholder="PayPal email or link" />
       </div>
@@ -342,6 +360,9 @@ var settings = {
   accountName: 'The One Concierge Service',
   accountNo: '180008736850',
   swift: 'SHBKKRSE',
+  domesticBank: '',
+  domesticAccountName: '',
+  domesticAccountNo: '',
   paypal: ''
 };
 var clients = [];
@@ -399,7 +420,7 @@ function loadAllData(cb) {
       clients = cls && cls.length ? cls : [];
       fbLoadCollection('settings', function(sets) {
         var s = sets && sets[0];
-        if (s && s.nameEn) settings = s;
+        if (s && s.nameEn) settings = Object.assign({}, settings, s);
         if (cb) cb();
       });
     });
@@ -481,8 +502,10 @@ function fmtCur(n, cur) {
 
 function togglePaymentMethod() {
   var method = document.getElementById('payment-method') ? document.getElementById('payment-method').value : 'bank';
-  var row = document.getElementById('payment-link-row');
-  if (row) row.style.display = method === 'link' ? 'block' : 'none';
+  var linkRow = document.getElementById('payment-link-row');
+  var bankRow = document.getElementById('payment-bank-row');
+  if (linkRow) linkRow.style.display = method === 'link' ? 'block' : 'none';
+  if (bankRow) bankRow.style.display = method === 'bank' ? 'block' : 'none';
 }
 
 function calcTotals() {
@@ -544,6 +567,7 @@ function getFormData() {
     vatOption: document.getElementById('vat-option') ? document.getElementById('vat-option').value : 'exclude',
     vatRate: '10',
     paymentMethod: document.getElementById('payment-method') ? document.getElementById('payment-method').value : 'bank',
+    paymentAccountType: document.getElementById('payment-account-type') ? document.getElementById('payment-account-type').value : 'international',
     paymentLinkUrl: document.getElementById('payment-link-url') ? document.getElementById('payment-link-url').value : '',
     notes: document.getElementById('inv-notes').value,
     status: 'unpaid',
@@ -617,6 +641,12 @@ function fmtAmount(n, currency) {
 function buildPDF(inv) {
   var jsPDF = window.jspdf.jsPDF;
   var doc = new jsPDF({ unit: 'mm', format: 'a4' });
+
+  // Never generate a corrupted Korean PDF when the font asset failed to load.
+  var hasKorean = /[\u3131-\u318E\uAC00-\uD7A3]/.test(JSON.stringify(inv || {}));
+  if (hasKorean && !window.NOTO_REGULAR_B64) {
+    throw new Error('한글 PDF 폰트를 불러오지 못했습니다. 페이지를 새로고침한 뒤 다시 시도해 주세요.');
+  }
 
   // ─ NotoSansKR 한글 폰트 등록 ─
   if (window.NOTO_REGULAR_B64) {
@@ -830,7 +860,12 @@ function buildPDF(inv) {
     doc.textWithLink(inv.paymentLinkUrl, ML + 30, Y, { url: inv.paymentLinkUrl });
     Y += 6;
   } else {
-    var bInfo = [
+    var isDomestic = inv.paymentAccountType === 'domestic';
+    var bInfo = isDomestic ? [
+      ['은행',     settings.domesticBank || ''],
+      ['예금주',   settings.domesticAccountName || ''],
+      ['계좌번호', settings.domesticAccountNo || '']
+    ] : [
       ['Bank',           settings.bank || 'Shinhan Bank'],
       ['Bank Address',   settings.bankAddress || '120, 2-90 Taepyeong-ro, Chung-gu, Seoul, Korea'],
       ['Account Holder', settings.accountName || 'The One Concierge Service'],
@@ -874,12 +909,14 @@ function buildPDF(inv) {
 function previewPDF() {
   var data = getFormData();
   if (!data.clientCompany) { alert('Please enter a client name first.'); return; }
+  if (!validatePaymentDetails(data)) return;
   var doc = buildPDF(data);
   var url = doc.output('bloburl');
   window.open(url, '_blank');
 }
 
 function previewPDFInv(inv) {
+  if (!validatePaymentDetails(inv)) return;
   var doc = buildPDF(inv);
   var url = doc.output('bloburl');
   window.open(url, '_blank');
@@ -888,8 +925,17 @@ function previewPDFInv(inv) {
 function downloadPDF(inv) {
   if (!inv) inv = getFormData();
   if (!inv.clientCompany && !inv.number) { alert('Please fill in invoice details first.'); return; }
+  if (!validatePaymentDetails(inv)) return;
   var doc = buildPDF(inv);
   doc.save((inv.number || 'invoice') + '.pdf');
+}
+
+function validatePaymentDetails(inv) {
+  if (inv.paymentMethod === 'bank' && inv.paymentAccountType === 'domestic' && !settings.domesticAccountNo) {
+    alert('Settings에서 국내 계좌 정보를 먼저 입력해 주세요.');
+    return false;
+  }
+  return true;
 }
 
 // ── DASHBOARD ────────────────────────────────────────────
@@ -987,6 +1033,9 @@ function editInvoice(id) {
     document.getElementById('payment-method').value = inv.paymentMethod || 'bank';
     togglePaymentMethod();
   }
+  if (document.getElementById('payment-account-type')) {
+    document.getElementById('payment-account-type').value = inv.paymentAccountType || 'international';
+  }
   if (document.getElementById('payment-link-url')) document.getElementById('payment-link-url').value = inv.paymentLinkUrl || '';
   document.getElementById('inv-notes').value = inv.notes || '';
 
@@ -1055,6 +1104,9 @@ function loadSettings() {
   document.getElementById('s-account-name').value = settings.accountName || '';
   document.getElementById('s-account-no').value = settings.accountNo || '';
   document.getElementById('s-swift').value = settings.swift || '';
+  document.getElementById('s-domestic-bank').value = settings.domesticBank || '';
+  document.getElementById('s-domestic-account-name').value = settings.domesticAccountName || '';
+  document.getElementById('s-domestic-account-no').value = settings.domesticAccountNo || '';
   document.getElementById('s-paypal').value = settings.paypal || '';
   renderClientList();
 }
@@ -1070,6 +1122,9 @@ function saveSettings() {
     accountName: document.getElementById('s-account-name').value,
     accountNo: document.getElementById('s-account-no').value,
     swift: document.getElementById('s-swift').value,
+    domesticBank: document.getElementById('s-domestic-bank').value,
+    domesticAccountName: document.getElementById('s-domestic-account-name').value,
+    domesticAccountNo: document.getElementById('s-domestic-account-no').value,
     paypal: document.getElementById('s-paypal').value
   };
   apiPost('/api/settings', settings, null);
