@@ -1,4 +1,8 @@
-# VIP Invoice Admin
+# VIP Invoice System
+
+The public `/invoice/` page uses the original Firestore application and its existing invoices. The separate Supabase administrator application is available at `/invoice/admin.html`; its database is independent and has not been populated with the Firestore records.
+
+`npm run build` builds the administrator entry and copies the original `index.html` to the deployment root. Deploy the complete `dist/` directory.
 
 Independent Supabase-backed invoice administration for VIP Transfers Korea. The former Firestore implementation is preserved in `legacy-index.html` and the source data backup is under `backups/firestore-2026-08-28/`. The backup directory is intentionally gitignored because it contains private customer and financial data.
 
